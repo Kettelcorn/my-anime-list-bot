@@ -33,13 +33,17 @@ public class MyListeners extends ListenerAdapter {
     private List<Anime> search;
     private List<Anime> shows;
     private MyAnimeList mal;
-    private List<AnimeListStatus> animeListStatus;
+    private List<List<AnimeListStatus>> animeListStatus;
+    private List<String> users;
+    private Statement statement;
 
 
 
-    public MyListeners(){
+    public MyListeners(List<List<AnimeListStatus>> animeListStatus, List<String> users){
         search = new ArrayList<>();
-        animeListStatus = new ArrayList<>();
+        this.animeListStatus = animeListStatus;
+        this.users = users;
+        users = new ArrayList<>();
     }
     @Override
     public void onSlashCommandInteraction(@NotNull SlashCommandInteractionEvent event) {
@@ -49,25 +53,8 @@ public class MyListeners extends ListenerAdapter {
                     .setPlaceholder("Enter show here").build();
             Modal modal = Modal.create("modmail", "MyAnimeListBot").addActionRow(show).build();
             event.replyModal(modal).queue();
-            animeListStatus = mal.getUserAnimeListing("Kettelcorn").withStatus("completed").withLimit(500).search();
 
             // access to MySQL database
-            try {
-                Connection connection = DriverManager.getConnection("jdbc:mysql://localhost:3306/mal-users", "root", "Wavedash420$");
-
-                Statement statement = connection.createStatement();
-
-                int result = statement.executeUpdate("INSERT INTO users (idusers, user) VALUES (1, 'Plardwich')");
-
-                ResultSet resultSet = statement.executeQuery("select * from users");
-
-                while (resultSet.next()) {
-                    System.out.println(resultSet.getInt("idusers"));
-                    System.out.println(resultSet.getString("user"));
-                }
-            } catch (Exception e) {
-                e.printStackTrace();
-            }
         }
     }
 
@@ -94,10 +81,18 @@ public class MyListeners extends ListenerAdapter {
                     selectedShow = anime;
                 }
             }
-            String hasWatched = "not";
-            for (AnimeListStatus listStatus : animeListStatus) {
-                if (listStatus.getAnime().getID().equals(selectedShow.getID())) {
-                    hasWatched = "";
+
+            double scoreTotal = 0.0;
+            int totalWatched = 0;
+            String hasWatched = "";
+            for (List<AnimeListStatus> list : animeListStatus) {
+                for (AnimeListStatus show: list) {
+                    if (show.getAnime().getID().equals(selectedShow.getID())) {
+                        hasWatched += users.get(animeListStatus.indexOf(list)) + ": " +
+                                show.getScore().toString() + "\n";
+                        scoreTotal += show.getScore().intValue();
+                        totalWatched++;
+                    }
                 }
             }
 
@@ -107,10 +102,11 @@ public class MyListeners extends ListenerAdapter {
             embedBuilder.setTitle(selectedShow.getTitle());
             embedBuilder.setColor(Color.CYAN);
             embedBuilder.setImage(selectedShow.getMainPicture().getLargeURL());
-            embedBuilder.addField(url, "Episodes: " + selectedShow.getEpisodes() + "\n" +
-                      "Kettelcorn has " + hasWatched + " watched this show", false);
+            embedBuilder.addField(url, "Episodes: " + selectedShow.getEpisodes() + "\n\n" + "__Completed__" + "\n" +
+                       hasWatched + "\n\n" + "Average Score: " + Math.round(100.0 * scoreTotal / totalWatched) / 100.0, false);
             embedBuilder.setFooter("Request made by " + event.getMember().getUser().getName(),
                     event.getMember().getUser().getAvatarUrl());
+            event.reply("Building info...").setEphemeral(true).queue();
             event.getChannel().sendMessageEmbeds(embedBuilder.build()).queue();
         }
     }
