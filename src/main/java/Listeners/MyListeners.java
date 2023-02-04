@@ -2,6 +2,10 @@ package Listeners;
 
 import java.awt.*;
 import java.net.URL;
+import java.sql.DriverManager;
+import java.sql.ResultSet;
+import java.sql.Statement;
+import java.sql.Connection;
 import java.util.*;
 import java.util.List;
 
@@ -45,7 +49,25 @@ public class MyListeners extends ListenerAdapter {
                     .setPlaceholder("Enter show here").build();
             Modal modal = Modal.create("modmail", "MyAnimeListBot").addActionRow(show).build();
             event.replyModal(modal).queue();
-            animeListStatus = mal.getUserAnimeListing("Kettelcorn").withStatus("completed").withLimit(100).search();
+            animeListStatus = mal.getUserAnimeListing("Kettelcorn").withStatus("completed").withLimit(500).search();
+
+            // access to MySQL database
+            try {
+                Connection connection = DriverManager.getConnection("jdbc:mysql://localhost:3306/mal-users", "root", "Wavedash420$");
+
+                Statement statement = connection.createStatement();
+
+                int result = statement.executeUpdate("INSERT INTO users (idusers, user) VALUES (1, 'Plardwich')");
+
+                ResultSet resultSet = statement.executeQuery("select * from users");
+
+                while (resultSet.next()) {
+                    System.out.println(resultSet.getInt("idusers"));
+                    System.out.println(resultSet.getString("user"));
+                }
+            } catch (Exception e) {
+                e.printStackTrace();
+            }
         }
     }
 
