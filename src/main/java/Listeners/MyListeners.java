@@ -24,6 +24,7 @@ import net.dv8tion.jda.api.entities.channel.middleman.MessageChannel;
 import net.dv8tion.jda.api.events.interaction.ModalInteractionEvent;
 import net.dv8tion.jda.api.events.interaction.command.SlashCommandInteractionEvent;
 import net.dv8tion.jda.api.events.interaction.component.StringSelectInteractionEvent;
+import net.dv8tion.jda.api.events.message.MessageReceivedEvent;
 import net.dv8tion.jda.api.hooks.ListenerAdapter;
 import net.dv8tion.jda.api.interactions.components.selections.StringSelectInteraction;
 import net.dv8tion.jda.api.interactions.components.selections.StringSelectMenu;
@@ -38,14 +39,16 @@ public class MyListeners extends ListenerAdapter {
     private List<Anime> search;
     private List<Anime> shows;
     private MyAnimeList mal;
-    private Map<String, List<AnimeListStatus>> animeListStatus;
+    private List<List<AnimeListStatus>> animeListStatus;
+    private List<String> currentUser;
     private Statement statement;
 
 
 
-    public MyListeners(Map<String, List<AnimeListStatus>> animeListStatus){
+    public MyListeners(){
         search = new ArrayList<>();
-        this.animeListStatus = animeListStatus;
+        currentUser = new ArrayList<>();
+        animeListStatus = new ArrayList<>();
     }
 
     // chooses between mal-search and mal update slash commands
@@ -61,16 +64,19 @@ public class MyListeners extends ListenerAdapter {
             // access to MySQL database
         }
         if (event.getName().equals("mal-update")) {
-            event.reply("Update starting..").setEphemeral(true).queue();
-            animeListStatus = Main.updateMal(event);
+            StringSelectMenu.Builder builder = StringSelectMenu.create("select-user");
+            for (String user : Main.getUsers()) {
+                builder.addOption(user, user);
+            }
+            event.reply("Select the user you wish to update: ").setEphemeral(true).addActionRow(builder.build()).queue();
         }
     }
 
 
-        @Override
+    @Override
         public void onModalInteraction(@NotNull ModalInteractionEvent event){
             if (event.getModalId().equals("modmail")) {
-                String show = event.getValue("Search").getAsString();
+                String show = event.getValue("Search").toString();
                 search = mal.getAnime().withQuery(show).search();
 
 
@@ -90,20 +96,21 @@ public class MyListeners extends ListenerAdapter {
                         selectedShow = anime;
                     }
                 }
-
+                System.out.println(selectedShow.getID().toString());
                 double scoreTotal = 0.0;
                 int totalWatched = 0;
                 String hasWatched = "";
-                for (Map.Entry<String, List<AnimeListStatus>> entry : animeListStatus.entrySet()) {
-                    for (AnimeListStatus show : entry.getValue()) {
-                        if (show.getAnime().getID().equals(selectedShow.getID())) {
-                            hasWatched += entry.getKey() + ": " +
-                                    show.getScore().toString() + "\n";
-                            scoreTotal += show.getScore().intValue();
+                for (List<AnimeListStatus> user : animeListStatus) {
+                    for (AnimeListStatus anime : user) {
+                        if (anime.getAnime().getID().equals(selectedShow.getID())) {
+                            hasWatched += currentUser.get(animeListStatus.indexOf(user)) + ": " +
+                                    anime.getScore().toString() + "\n";
+                            scoreTotal += anime.getScore().intValue();
                             totalWatched++;
                         }
                     }
                 }
+
 
                 int id = selectedShow.getID().intValue();
                 String url = "https://myanimelist.net/anime/" + id;
@@ -117,6 +124,20 @@ public class MyListeners extends ListenerAdapter {
                         event.getMember().getUser().getAvatarUrl());
                 event.reply("Building info...").setEphemeral(true).queue();
                 event.getChannel().sendMessageEmbeds(embedBuilder.build()).queue();
+            }
+            if (event.getComponentId().equals("select-user")) {
+                String user = event.getValues().get(0);
+                event.deferReply().setEphemeral(true).queue();
+                MyAnimeList mal = MyAnimeList.withClientID("ed63f8418f1cdf0c626aae8618705f15");
+                if (currentUser.contains(user)) {
+                    animeListStatus.remove(currentUser.indexOf(user));
+                    currentUser.remove(user);
+                }
+                animeListStatus.add(mal
+                        .getUserAnimeListing(user)
+                        .withStatus("completed").withLimit(500).search());
+                currentUser.add(user);
+                event.getHook().sendMessage("Finished updating " + user + "'s info!").setEphemeral(true).queue();
             }
         }
 }

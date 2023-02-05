@@ -24,39 +24,30 @@ public class Main {
 
     // create bot using token and sets slash commands
     public static void main(String[] args) throws LoginException {
-        Map<String, List<AnimeListStatus>> animeListStatus = new HashMap<>();
         String token = "MTA3MDkyNjI0MDU2OTA5ODMzMA.Griorb.1czQ4_1eygWo3CCo0LNRFF2khu-oNn36geuJxY";
         JDA jda = JDABuilder.createDefault(token).enableIntents(GatewayIntent.MESSAGE_CONTENT).build();
-        jda.addEventListener(new MyListeners(animeListStatus));
+        jda.addEventListener(new MyListeners());
         jda.upsertCommand("mal-search", "Search for show on MAL").setGuildOnly(true).queue();
         jda.upsertCommand("mal-update", "Update MAL data from shows and users").setGuildOnly(true).queue();
     }
 
-    // gets MAL info and returns map containing user info
-    public static Map<String, List<AnimeListStatus>> updateMal(SlashCommandInteractionEvent event) {
-        Message message = event.getMessageChannel().sendMessage("Starting update...").complete();
-        Map<String, List<AnimeListStatus>> animeListStatus = new HashMap<>();
-        Map<String, String> users = new HashMap<>();
-        users.put("Kettelcorn", "Jackson");
-        users.put("BetaTrap", "David");
-        users.put("uhu_", "Aaron");
-        users.put("TASPlasma", "Derrick");
-        users.put("Belgado", "Andy");
-        users.put("ShinobiArc", "Connor");
-        users.put("coldunforgiving", "Andrew S");
-        users.put("u4it", "Mitch");
-        users.put("Antonyaamous", "Anthony");
-        users.put("Plardwich", "Jason");
-        MyAnimeList mal = MyAnimeList.withClientID("ed63f8418f1cdf0c626aae8618705f15");
-        for (Map.Entry<String, String> entry : users.entrySet()) {
-            message.editMessage("Updating " + entry.getKey() + "'s list, this may take a few minutes...").queue();
-            System.out.println(entry.getKey());
-            animeListStatus.put(entry.getValue(), mal
-                    .getUserAnimeListing(entry.getKey())
-                    .withStatus("completed").withLimit(500).search());
-            }
-            message.editMessage("Finished Update").queue();
 
+    // returns list of users
+    public static List<String> getUsers() {
+        List<String> users = new ArrayList<>();
+        users.add("u4it");
+        users.add("TASPlasma");
+        users.add("Belgado");
+        users.add("Kettelcorn");
+        users.add("uhu_");
+        users.add("ShinobiArc");
+        users.add("coldunforgiving");
+        users.add("BetaTrap");
+        users.add("Antonyaamous");
+        users.add("Plardwich");
+        return users;
+    }
+}
         // connect to database
         /*try {
             Connection connection = DriverManager.getConnection("jdbc:mysql://us-cdbr-east-06.cleardb.net:3306/heroku_1e6b905fd709b70", "b376f2add348e8", "6f63cbc1");
@@ -75,6 +66,6 @@ public class Main {
         } catch (Exception e) {
             e.printStackTrace();
         }*/
-        return animeListStatus;
-    }
-}
+
+
+
