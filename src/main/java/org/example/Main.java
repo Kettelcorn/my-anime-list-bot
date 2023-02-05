@@ -51,11 +51,12 @@ public class Main {
         for (Map.Entry<String, String> entry : users.entrySet()) {
             message.editMessage("Updating " + entry.getKey() + "'s list, this may take a few minutes...").queue();
             System.out.println(entry.getKey());
-            animeListStatus.put(entry.getValue(), mal.
-                    getUserAnimeListing(entry.getKey()).
-                    withStatus("completed").withLimit(500).search());
-        }
-        message.editMessage("Finished Update").queue();
+            animeListStatus.put(entry.getValue(), mal
+                    .getUserAnimeListing(entry.getKey())
+                    .withStatus("completed").withLimit(500).search());
+            }
+            message.editMessage("Finished Update").queue();
+
         // connect to database
         /*try {
             Connection connection = DriverManager.getConnection("jdbc:mysql://us-cdbr-east-06.cleardb.net:3306/heroku_1e6b905fd709b70", "b376f2add348e8", "6f63cbc1");
