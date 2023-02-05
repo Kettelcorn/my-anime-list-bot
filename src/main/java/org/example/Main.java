@@ -36,7 +36,7 @@ public class Main {
 
         // connect to database
         try {
-            Connection connection = DriverManager.getConnection("jdbc:mysql://localhost:3306/mal-users", "root", "Wavedash420$");
+            Connection connection = DriverManager.getConnection("jdbc:mysql://us-cdbr-east-06.cleardb.net:3306/heroku_1e6b905fd709b70", "b376f2add348e8", "6f63cbc1");
             Statement statement = connection.createStatement();
             ResultSet resultSet = statement.executeQuery("select * from users");
 
