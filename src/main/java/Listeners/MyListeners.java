@@ -90,6 +90,7 @@ public class MyListeners extends ListenerAdapter {
         @Override
         public void onStringSelectInteraction(@NotNull StringSelectInteractionEvent event){
             if (event.getComponentId().equals("select-anime")) {
+                event.deferReply().setEphemeral(true).queue();
                 Anime selectedShow = null;
                 for (Anime anime : search) {
                     if (event.getValues().get(0).equals(anime.getTitle())) {
@@ -122,8 +123,8 @@ public class MyListeners extends ListenerAdapter {
                         hasWatched + "\n\n" + "Average Score: " + Math.round(100.0 * scoreTotal / totalWatched) / 100.0, false);
                 embedBuilder.setFooter("Request made by " + event.getMember().getUser().getName(),
                         event.getMember().getUser().getAvatarUrl());
-                event.reply("Building info...").setEphemeral(true).queue();
                 event.getChannel().sendMessageEmbeds(embedBuilder.build()).queue();
+                event.getHook().sendMessage("Request complete!").setEphemeral(true).queue();
             }
             if (event.getComponentId().equals("select-user")) {
                 String user = event.getValues().get(0);
