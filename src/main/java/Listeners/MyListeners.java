@@ -61,10 +61,8 @@ public class MyListeners extends ListenerAdapter {
             // access to MySQL database
         }
         if (event.getName().equals("mal-update")) {
-            event.reply("Updating user info, this may take a few minutes...").setEphemeral(true).queue();
-            animeListStatus = Main.updateMal();
-            MessageChannel messageChannel = event.getMessageChannel();
-            messageChannel.sendMessage("Update complete!").queue();
+            event.reply("Update starting..").setEphemeral(true).queue();
+            animeListStatus = Main.updateMal(event);
         }
     }
 

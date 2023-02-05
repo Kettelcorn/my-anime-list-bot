@@ -20,13 +20,15 @@
             <artifactId>JDA</artifactId>
             <version>5.0.0-beta.3</version>
         </dependency>
+        <!-- https://mvnrepository.com/artifact/dev.katsute/mal4j -->
         <dependency>
             <groupId>dev.katsute</groupId>
             <artifactId>mal4j</artifactId>
-            <version>3.0.1</version>
+            <version>3.0.0</version>
         </dependency>
     </dependencies>
 
+    <!--https://stackoverflow.com/questions/61780101/intellij-does-not-recompile-build-maven-project-->
     <build>
         <plugins>
             <plugin>
