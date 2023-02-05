@@ -1,0 +1,1 @@
+worker: java -jar out/artifacts/my_anime_list_bot_jar/my-anime-list-bot.jar
