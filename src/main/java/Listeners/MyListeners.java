@@ -21,11 +21,16 @@ import dev.katsute.mal4j.user.UserAnimeStatistics;
 import net.dv8tion.jda.api.EmbedBuilder;
 import net.dv8tion.jda.api.entities.Message;
 import net.dv8tion.jda.api.entities.channel.middleman.MessageChannel;
+import net.dv8tion.jda.api.events.guild.GuildReadyEvent;
 import net.dv8tion.jda.api.events.interaction.ModalInteractionEvent;
 import net.dv8tion.jda.api.events.interaction.command.SlashCommandInteractionEvent;
 import net.dv8tion.jda.api.events.interaction.component.StringSelectInteractionEvent;
 import net.dv8tion.jda.api.events.message.MessageReceivedEvent;
 import net.dv8tion.jda.api.hooks.ListenerAdapter;
+import net.dv8tion.jda.api.interactions.commands.OptionType;
+import net.dv8tion.jda.api.interactions.commands.build.CommandData;
+import net.dv8tion.jda.api.interactions.commands.build.Commands;
+import net.dv8tion.jda.api.interactions.commands.build.OptionData;
 import net.dv8tion.jda.api.interactions.components.selections.StringSelectInteraction;
 import net.dv8tion.jda.api.interactions.components.selections.StringSelectMenu;
 import net.dv8tion.jda.api.interactions.components.text.TextInput;
@@ -51,42 +56,51 @@ public class MyListeners extends ListenerAdapter {
         animeListStatus = new ArrayList<>();
     }
 
+    @Override
+    public void onGuildReady(GuildReadyEvent event) {
+        List<CommandData> commandData = new ArrayList<>();
+        OptionData option1 = new OptionData(OptionType.STRING, "user", "enter username");
+        OptionData option2 = new OptionData(OptionType.STRING, "anime", "enter anime");
+        commandData.add(Commands.slash("anime-search", "search for anime")
+                .addOptions(option2));
+        commandData.add(Commands.slash("anime-update", "update user info")
+                .addOptions(option1));
+        event.getGuild().updateCommands().addCommands(commandData).queue();
+    }
+
     // chooses between mal-search and mal update slash commands
     @Override
     public void onSlashCommandInteraction(@NotNull SlashCommandInteractionEvent event) {
-        if (event.getName().equals("mal-search")) {
+        if (event.getName().equals("anime-search")) {
+            event.deferReply().setEphemeral(true).queue();
             mal = MyAnimeList.withClientID("ed63f8418f1cdf0c626aae8618705f15");
-            TextInput show = TextInput.create("Search", "Search", TextInputStyle.SHORT)
-                    .setPlaceholder("Enter show here").build();
-            Modal modal = Modal.create("modmail", "MyAnimeListBot").addActionRow(show).build();
-            event.replyModal(modal).queue();
-
-            // access to MySQL database
-        }
-        if (event.getName().equals("mal-update")) {
-            StringSelectMenu.Builder builder = StringSelectMenu.create("select-user");
-            for (String user : Main.getUsers()) {
-                builder.addOption(user, user);
+            String show = event.getOption("anime").getAsString();
+            search = mal.getAnime().withQuery(show).search();
+            StringSelectMenu.Builder builder = StringSelectMenu.create("select-anime");
+            for (Anime anime : search) {
+                builder.addOption(anime.getTitle(), anime.getTitle());
             }
-            event.reply("Select the user you wish to update: ").setEphemeral(true).addActionRow(builder.build()).queue();
+            event.getHook().sendMessage("Select the correct show: ").setEphemeral(true).addActionRow(builder.build()).queue();
+        }
+
+        if (event.getName().equals("anime-update")) {
+            MyAnimeList mal = MyAnimeList.withClientID("ed63f8418f1cdf0c626aae8618705f15");
+            String user = event.getOption("user").getAsString();
+            event.deferReply().addContent("Updating " + user + "'s info, this may take a while")
+                    .setEphemeral(true).queue();
+            if (currentUser.contains(user)) {
+                animeListStatus.remove(currentUser.indexOf(user));
+                currentUser.remove(user);
+            }
+            animeListStatus.add(mal
+                    .getUserAnimeListing(user)
+                    .withStatus("completed").withLimit(500).search());
+            currentUser.add(user);
+            event.getHook().sendMessage("Finished updating " + user + "'s info!").setEphemeral(true).queue();
+
         }
     }
 
-
-    @Override
-        public void onModalInteraction(@NotNull ModalInteractionEvent event){
-            if (event.getModalId().equals("modmail")) {
-                String show = event.getValue("Search").toString();
-                search = mal.getAnime().withQuery(show).search();
-
-
-                StringSelectMenu.Builder builder = StringSelectMenu.create("select-anime");
-                for (Anime anime : search) {
-                    builder.addOption(anime.getTitle(), anime.getTitle());
-                }
-                event.reply("Select the correct show: ").setEphemeral(true).addActionRow(builder.build()).queue();
-            }
-        }
         @Override
         public void onStringSelectInteraction(@NotNull StringSelectInteractionEvent event){
             if (event.getComponentId().equals("select-anime")) {
@@ -112,7 +126,6 @@ public class MyListeners extends ListenerAdapter {
                     }
                 }
 
-
                 int id = selectedShow.getID().intValue();
                 String url = "https://myanimelist.net/anime/" + id;
                 EmbedBuilder embedBuilder = new EmbedBuilder();
@@ -120,25 +133,11 @@ public class MyListeners extends ListenerAdapter {
                 embedBuilder.setColor(Color.CYAN);
                 embedBuilder.setImage(selectedShow.getMainPicture().getLargeURL());
                 embedBuilder.addField(url, "Episodes: " + selectedShow.getEpisodes() + "\n\n" + "__Completed__" + "\n" +
-                        hasWatched + "\n\n" + "Average Score: " + Math.round(100.0 * scoreTotal / totalWatched) / 100.0, false);
+                        hasWatched + "\n" + "Average Server Score: " + Math.round(100.0 * scoreTotal / totalWatched) / 100.0, false);
                 embedBuilder.setFooter("Request made by " + event.getMember().getUser().getName(),
                         event.getMember().getUser().getAvatarUrl());
                 event.getChannel().sendMessageEmbeds(embedBuilder.build()).queue();
                 event.getHook().sendMessage("Request complete!").setEphemeral(true).queue();
-            }
-            if (event.getComponentId().equals("select-user")) {
-                String user = event.getValues().get(0);
-                event.deferReply().setEphemeral(true).queue();
-                MyAnimeList mal = MyAnimeList.withClientID("ed63f8418f1cdf0c626aae8618705f15");
-                if (currentUser.contains(user)) {
-                    animeListStatus.remove(currentUser.indexOf(user));
-                    currentUser.remove(user);
-                }
-                animeListStatus.add(mal
-                        .getUserAnimeListing(user)
-                        .withStatus("completed").withLimit(500).search());
-                currentUser.add(user);
-                event.getHook().sendMessage("Finished updating " + user + "'s info!").setEphemeral(true).queue();
             }
         }
 }

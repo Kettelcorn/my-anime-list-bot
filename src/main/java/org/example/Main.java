@@ -17,7 +17,9 @@ import net.dv8tion.jda.api.entities.Message;
 import net.dv8tion.jda.api.entities.channel.middleman.MessageChannel;
 import net.dv8tion.jda.api.events.interaction.command.SlashCommandInteractionEvent;
 import net.dv8tion.jda.api.interactions.commands.OptionType;
+import net.dv8tion.jda.api.interactions.commands.build.CommandData;
 import net.dv8tion.jda.api.interactions.commands.build.Commands;
+import net.dv8tion.jda.api.interactions.commands.build.OptionData;
 import net.dv8tion.jda.api.requests.GatewayIntent;
 
 public class Main {
@@ -27,25 +29,6 @@ public class Main {
         String token = "MTA3MDkyNjI0MDU2OTA5ODMzMA.Griorb.1czQ4_1eygWo3CCo0LNRFF2khu-oNn36geuJxY";
         JDA jda = JDABuilder.createDefault(token).enableIntents(GatewayIntent.MESSAGE_CONTENT).build();
         jda.addEventListener(new MyListeners());
-        jda.upsertCommand("mal-search", "Search for show on MAL").setGuildOnly(true).queue();
-        jda.upsertCommand("mal-update", "Update MAL data from shows and users").setGuildOnly(true).queue();
-    }
-
-
-    // returns list of users
-    public static List<String> getUsers() {
-        List<String> users = new ArrayList<>();
-        users.add("u4it");
-        users.add("TASPlasma");
-        users.add("Belgado");
-        users.add("Kettelcorn");
-        users.add("uhu_");
-        users.add("ShinobiArc");
-        users.add("coldunforgiving");
-        users.add("BetaTrap");
-        users.add("Antonyaamous");
-        users.add("Plardwich");
-        return users;
     }
 }
         // connect to database
