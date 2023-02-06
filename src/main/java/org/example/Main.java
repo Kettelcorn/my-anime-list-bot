@@ -7,6 +7,8 @@ import java.sql.ResultSet;
 import java.sql.Statement;
 import java.time.Duration;
 import java.util.*;
+
+import Listeners.MyListener;
 import Listeners.MyListeners;
 import dev.katsute.mal4j.MyAnimeList;
 import dev.katsute.mal4j.anime.AnimeListStatus;
@@ -29,6 +31,18 @@ public class Main {
         String token = "MTA3MDkyNjI0MDU2OTA5ODMzMA.Griorb.1czQ4_1eygWo3CCo0LNRFF2khu-oNn36geuJxY";
         JDA jda = JDABuilder.createDefault(token).enableIntents(GatewayIntent.MESSAGE_CONTENT).build();
         jda.addEventListener(new MyListeners());
+        runCustomBuilder();
+    }
+
+    public static void runCustomBuilder() {
+        String token = "MTA2NjUxNTM4NTI2MTc3MjgwMA.GkJ7WE.4R0FKyqw6lFSZT7wQxOHPGMnaTbQyypkZzGNJk";
+        JDA jda = JDABuilder
+                .createDefault("MTA2NjUxNTM4NTI2MTc3MjgwMA.GkJ7WE.4R0FKyqw6lFSZT7wQxOHPGMnaTbQyypkZzGNJk").enableIntents(GatewayIntent.MESSAGE_CONTENT)
+                .build();
+        jda.addEventListener(new MyListener());
+
+        // slash command for bot
+        jda.upsertCommand("custom-builder", "creates ARAM team").setGuildOnly(true).queue();
     }
 }
         // connect to database
