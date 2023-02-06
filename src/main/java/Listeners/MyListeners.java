@@ -119,7 +119,7 @@ public class MyListeners extends ListenerAdapter {
                     for (AnimeListStatus anime : user) {
                         if (anime.getAnime().getID().equals(selectedShow.getID())) {
                             if (anime.getScore().intValue() == 0) {
-                                hasWatched += currentUser.get(animeListStatus.indexOf(user));
+                                hasWatched += currentUser.get(animeListStatus.indexOf(user)) + "\n";
                             } else {
                                 hasWatched += currentUser.get(animeListStatus.indexOf(user)) + ": " +
                                         anime.getScore().toString() + "\n";
