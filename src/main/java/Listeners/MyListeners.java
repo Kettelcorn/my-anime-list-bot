@@ -61,10 +61,13 @@ public class MyListeners extends ListenerAdapter {
         List<CommandData> commandData = new ArrayList<>();
         OptionData option1 = new OptionData(OptionType.STRING, "user", "enter username");
         OptionData option2 = new OptionData(OptionType.STRING, "anime", "enter anime");
-        commandData.add(Commands.slash("anime-search", "search for anime")
-                .addOptions(option2));
         commandData.add(Commands.slash("anime-update", "update user info")
                 .addOptions(option1));
+        commandData.add(Commands.slash("anime-remove", "remove user info")
+                .addOptions(option1));
+        commandData.add(Commands.slash("anime-search", "search for anime")
+                .addOptions(option2));
+        ;
         event.getGuild().updateCommands().addCommands(commandData).queue();
     }
 
@@ -97,10 +100,22 @@ public class MyListeners extends ListenerAdapter {
                     .withStatus("completed").withLimit(500).search());
             currentUser.add(user);
             event.getHook().sendMessage("Finished updating " + user + "'s info!").setEphemeral(true).queue();
+        }
 
+        if (event.getName().equals("anime-remove")) {
+            if (!currentUser.contains(event.getOption("user").getAsString())) {
+                event.reply(event.getOption("user").getAsString() + " is not currently being used")
+                        .setEphemeral(true).queue();
+            } else {
+                animeListStatus.remove(currentUser.indexOf(event.getOption("user").getAsString()));
+                currentUser.remove(event.getOption("user").getAsString());
+                event.reply(event.getOption("user").getAsString() + " has been removed!")
+                        .setEphemeral(true).queue();
+            }
         }
     }
 
+        // when user selects an anime, find the correct show and send to be build
         @Override
         public void onStringSelectInteraction(@NotNull StringSelectInteractionEvent event){
             if (event.getComponentId().equals("select-anime")) {
@@ -109,39 +124,84 @@ public class MyListeners extends ListenerAdapter {
                 for (Anime anime : search) {
                     if (event.getValues().get(0).equals(anime.getTitle())) {
                         selectedShow = anime;
+                        break;
                     }
                 }
-                System.out.println(selectedShow.getID().toString());
-                double scoreTotal = 0.0;
-                int totalWatched = 0;
-                String hasWatched = "";
-                for (List<AnimeListStatus> user : animeListStatus) {
-                    for (AnimeListStatus anime : user) {
-                        if (anime.getAnime().getID().equals(selectedShow.getID())) {
-                            if (anime.getScore().intValue() == 0) {
-                                hasWatched += currentUser.get(animeListStatus.indexOf(user)) + "\n";
-                            } else {
-                                hasWatched += currentUser.get(animeListStatus.indexOf(user)) + ": " +
-                                        anime.getScore().toString() + "\n";
-                                scoreTotal += anime.getScore().intValue();
-                                totalWatched++;
-                            }
+                createEmbed(selectedShow);
+            }
+        }
+
+    @Override
+    public void onMessageReceived(MessageReceivedEvent event) {
+        if (event.getMessage().getContentRaw().contains("https://myanimelist.net/anime/")) {
+            String url = event.getMessage().getContentRaw();
+            event.getMessage().delete().queue();
+            int startIndex = "https://myanimelist.net/anime/".length();
+            int endIndex = url.indexOf("/", startIndex);
+            String numberString = url.substring(startIndex, endIndex);
+            int number = Integer.parseInt(numberString);
+            System.out.println(number);
+            mal = MyAnimeList.withClientID("ed63f8418f1cdf0c626aae8618705f15");
+            Anime selectedShow = mal.getAnime(number);
+            executeEmbedMessage(createEmbed(selectedShow), event);
+        }
+    }
+
+    //creates an embeded message with the given show
+        public EmbedBuilder createEmbed(Anime selectedShow) {
+            double scoreTotal = 0.0;
+            int totalWatched = 0;
+            String hasWatched = "";
+            String completed = "";
+
+            for (List<AnimeListStatus> user : animeListStatus) {
+                for (AnimeListStatus anime : user) {
+                    if (anime.getAnime().getID().equals(selectedShow.getID())) {
+                        completed = "\n\n" + "__Completed__" + "\n";
+                        if (anime.getScore().intValue() == 0) {
+                            hasWatched += currentUser.get(animeListStatus.indexOf(user)) + "\n";
+                        } else {
+                            hasWatched += currentUser.get(animeListStatus.indexOf(user)) + ": " +
+                                    anime.getScore().toString() + "\n";
+                            scoreTotal += anime.getScore().intValue();
+                            totalWatched++;
                         }
                     }
                 }
-
-                int id = selectedShow.getID().intValue();
-                String url = "https://myanimelist.net/anime/" + id;
-                EmbedBuilder embedBuilder = new EmbedBuilder();
-                embedBuilder.setTitle(selectedShow.getTitle());
-                embedBuilder.setColor(Color.CYAN);
-                embedBuilder.setImage(selectedShow.getMainPicture().getLargeURL());
-                embedBuilder.addField(url, "Episodes: " + selectedShow.getEpisodes() + "\n\n" + "__Completed__" + "\n" +
-                        hasWatched + "\n" + "Average Server Score: " + Math.round(100.0 * scoreTotal / totalWatched) / 100.0, false);
-                embedBuilder.setFooter("Request made by " + event.getMember().getUser().getName(),
-                        event.getMember().getUser().getAvatarUrl());
-                event.getChannel().sendMessageEmbeds(embedBuilder.build()).queue();
-                event.getHook().sendMessage("Request complete!").setEphemeral(true).queue();
             }
+
+            String serverScore = "\n" + "Average Server Score: " +
+                    Math.round(100.0 * scoreTotal / totalWatched) / 100.0 + "";
+            if (totalWatched == 0) {
+                serverScore = "";
+            }
+            String episodes = selectedShow.getEpisodes() + "";
+            if (episodes.equals("0")) {
+                episodes = "Not finished yet";
+            }
+
+            int id = selectedShow.getID().intValue();
+            String url = "https://myanimelist.net/anime/" + id;
+
+            EmbedBuilder embedBuilder = new EmbedBuilder();
+            embedBuilder.setTitle(selectedShow.getTitle());
+            embedBuilder.setColor(Color.CYAN);
+            embedBuilder.setImage(selectedShow.getMainPicture().getLargeURL());
+            embedBuilder.addField(url, "Episodes: " + episodes + completed +
+                    hasWatched + serverScore, false);
+            return embedBuilder;
         }
+
+        public void executeEmbedSelect(EmbedBuilder embedBuilder, StringSelectInteractionEvent event) {
+            embedBuilder.setFooter("Request made by " + event.getMember().getUser().getName(),
+                    event.getMember().getUser().getAvatarUrl());
+            event.getChannel().sendMessageEmbeds(embedBuilder.build()).queue();
+            event.getHook().sendMessage("Request complete!").setEphemeral(true).queue();
+        }
+
+    public void executeEmbedMessage(EmbedBuilder embedBuilder ,MessageReceivedEvent event) {
+        embedBuilder.setFooter("Request made by " + event.getMember().getUser().getName(),
+                event.getMember().getUser().getAvatarUrl());
+        event.getChannel().sendMessageEmbeds(embedBuilder.build()).queue();
+    }
 }
