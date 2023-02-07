@@ -49,13 +49,13 @@ public class MyListeners extends ListenerAdapter {
     private Statement statement;
 
 
-
     public MyListeners(){
         search = new ArrayList<>();
         currentUser = new ArrayList<>();
         animeListStatus = new ArrayList<>();
     }
 
+    // sets up slash commands
     @Override
     public void onGuildReady(GuildReadyEvent event) {
         List<CommandData> commandData = new ArrayList<>();
@@ -131,6 +131,7 @@ public class MyListeners extends ListenerAdapter {
             }
         }
 
+        // extracts show out of url
     @Override
     public void onMessageReceived(MessageReceivedEvent event) {
         if (event.getMessage().getContentRaw().contains("https://myanimelist.net/anime/")) {
@@ -192,6 +193,7 @@ public class MyListeners extends ListenerAdapter {
             return embedBuilder;
         }
 
+        //sends embeded message from string select
         public void executeEmbedSelect(EmbedBuilder embedBuilder, StringSelectInteractionEvent event) {
             embedBuilder.setFooter("Request made by " + event.getMember().getUser().getName(),
                     event.getMember().getUser().getAvatarUrl());
@@ -199,6 +201,7 @@ public class MyListeners extends ListenerAdapter {
             event.getHook().sendMessage("Request complete!").setEphemeral(true).queue();
         }
 
+        //sends embeded message from url message
     public void executeEmbedMessage(EmbedBuilder embedBuilder ,MessageReceivedEvent event) {
         embedBuilder.setFooter("Request made by " + event.getMember().getUser().getName(),
                 event.getMember().getUser().getAvatarUrl());

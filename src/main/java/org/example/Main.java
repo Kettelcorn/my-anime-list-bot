@@ -45,24 +45,7 @@ public class Main {
         jda.upsertCommand("custom-builder", "creates ARAM team").setGuildOnly(true).queue();
     }
 }
-        // connect to database
-        /*try {
-            Connection connection = DriverManager.getConnection("jdbc:mysql://us-cdbr-east-06.cleardb.net:3306/heroku_1e6b905fd709b70", "b376f2add348e8", "6f63cbc1");
-            Statement statement = connection.createStatement();
-            ResultSet resultSet = statement.executeQuery("select * from users");
 
-            // retrieve data from MAL and add to map
-            while (resultSet.next()) {
-                System.out.println(resultSet.getInt("idusers"));
-                System.out.println(resultSet.getString("user"));
-                MyAnimeList mal = MyAnimeList.withClientID("ed63f8418f1cdf0c626aae8618705f15");
-                animeListStatus.put(resultSet.getString("user"), mal.
-                        getUserAnimeListing(resultSet.getString("user")).
-                        withStatus("completed").withLimit(500).search());
-            }
-        } catch (Exception e) {
-            e.printStackTrace();
-        }*/
 
 
 
