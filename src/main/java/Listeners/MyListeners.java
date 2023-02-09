@@ -2,10 +2,7 @@ package Listeners;
 
 import java.awt.*;
 import java.net.URL;
-import java.sql.DriverManager;
-import java.sql.ResultSet;
-import java.sql.Statement;
-import java.sql.Connection;
+import java.sql.*;
 import java.time.Duration;
 import java.util.*;
 import java.util.List;
@@ -47,6 +44,7 @@ public class MyListeners extends ListenerAdapter {
     private List<List<AnimeListStatus>> animeListStatus;
     private List<String> currentUser;
     private Statement statement;
+    private GuildReadyEvent event;
 
 
     public MyListeners(){
@@ -58,6 +56,7 @@ public class MyListeners extends ListenerAdapter {
     // sets up slash commands
     @Override
     public void onGuildReady(GuildReadyEvent event) {
+        this.event = event;
         List<CommandData> commandData = new ArrayList<>();
         OptionData option1 = new OptionData(OptionType.STRING, "user", "enter username");
         OptionData option2 = new OptionData(OptionType.STRING, "anime", "enter anime");
@@ -74,6 +73,8 @@ public class MyListeners extends ListenerAdapter {
     // chooses between mal-search and mal update slash commands
     @Override
     public void onSlashCommandInteraction(@NotNull SlashCommandInteractionEvent event) {
+
+        // search for an anime
         if (event.getName().equals("anime-search")) {
             event.deferReply().setEphemeral(true).queue();
             mal = MyAnimeList.withClientID("ed63f8418f1cdf0c626aae8618705f15");
@@ -86,31 +87,133 @@ public class MyListeners extends ListenerAdapter {
             event.getHook().sendMessage("Select the correct show: ").setEphemeral(true).addActionRow(builder.build()).queue();
         }
 
+        // update user info in database
         if (event.getName().equals("anime-update")) {
             MyAnimeList mal = MyAnimeList.withClientID("ed63f8418f1cdf0c626aae8618705f15");
             String user = event.getOption("user").getAsString();
             event.deferReply().addContent("Updating " + user + "'s info, this may take a while")
                     .setEphemeral(true).queue();
-            if (currentUser.contains(user)) {
-                animeListStatus.remove(currentUser.indexOf(user));
-                currentUser.remove(user);
+
+            try{
+                Connection connection = DriverManager
+                        .getConnection("jdbc:mysql://us-cdbr-east-06.cleardb.net:3306/heroku_1e6b905fd709b70",
+                        "b376f2add348e8", "6f63cbc1");
+                String sql = "SELECT * FROM users";
+                Statement stmt = connection.createStatement();
+                ResultSet result = stmt.executeQuery(sql);
+
+                String selectedUser = "";
+                while (result.next()) {
+                    String name = result.getString("user");
+                    if (name.equals(user)) {
+                        selectedUser = name;
+                    }
+                }
+                if (selectedUser == "") {
+                    selectedUser = user;
+                    PreparedStatement preparedStatement = connection.prepareStatement("INSERT INTO users (user) VALUES (?)");
+                    preparedStatement.setString(1, selectedUser);
+                    preparedStatement.executeUpdate();
+                }
+
+                animeListStatus.add(mal.getUserAnimeListing(user)
+                        .withStatus("completed").withLimit(500).search());
+                List<String> animeID = new ArrayList<>();
+                List<String> animeScore = new ArrayList<>();
+                for (List<AnimeListStatus> animeList : animeListStatus) {
+                    for (AnimeListStatus anime : animeList) {
+                        animeID.add(anime.getAnime().getID().toString());
+                        animeScore.add(anime.getScore().toString());
+                    }
+                }
+                String listStr = String.join(",", animeID);
+                String scoreStr = String.join(",", animeScore);
+
+                PreparedStatement preparedStatement2 = connection.prepareStatement("UPDATE users SET anime = ? WHERE user = ?");
+                preparedStatement2.setString(1, listStr);
+                preparedStatement2.setString(2, selectedUser);
+                preparedStatement2.executeUpdate();
+
+                PreparedStatement preparedStatement3 = connection.prepareStatement("UPDATE users SET score = ? WHERE user = ?");
+                preparedStatement3.setString(1, scoreStr);
+                preparedStatement3.setString(2, selectedUser);
+                preparedStatement3.executeUpdate();
+
+                String guilds = "";
+                PreparedStatement preparedStatement4 = connection.prepareStatement("SELECT guilds FROM users WHERE user = ?");
+                preparedStatement4.setString(1, selectedUser);
+                ResultSet resultSet = preparedStatement4.executeQuery();
+                while (resultSet.next()) {
+                    guilds = resultSet.getString("guilds");
+                    if (guilds == null) {
+                        guilds = "";
+                    }
+                    if (!guilds.contains(event.getGuild().getId().toString())) {
+                        guilds += event.getGuild().getId().toString() + ",";
+                    }
+                }
+
+                PreparedStatement preparedStatement5 = connection.prepareStatement("UPDATE users SET guilds = ? WHERE user = ?");
+                preparedStatement5.setString(1, guilds);
+                preparedStatement5.setString(2, selectedUser);
+                preparedStatement5.executeUpdate();
+
+            } catch (SQLException e) {
+                System.out.println("Error connecting to SQLite database");
+                e.printStackTrace();
             }
-            animeListStatus.add(mal
-                    .getUserAnimeListing(user)
-                    .withStatus("completed").withLimit(500).search());
-            currentUser.add(user);
             event.getHook().sendMessage("Finished updating " + user + "'s info!").setEphemeral(true).queue();
         }
 
+        // remove user from database in specific guild
         if (event.getName().equals("anime-remove")) {
-            if (!currentUser.contains(event.getOption("user").getAsString())) {
-                event.reply(event.getOption("user").getAsString() + " is not currently being used")
-                        .setEphemeral(true).queue();
-            } else {
-                animeListStatus.remove(currentUser.indexOf(event.getOption("user").getAsString()));
-                currentUser.remove(event.getOption("user").getAsString());
-                event.reply(event.getOption("user").getAsString() + " has been removed!")
-                        .setEphemeral(true).queue();
+            try {
+                Connection connection = DriverManager
+                        .getConnection("jdbc:mysql://us-cdbr-east-06.cleardb.net:3306/heroku_1e6b905fd709b70",
+                                "b376f2add348e8", "6f63cbc1");
+
+                String sql = "SELECT * FROM users";
+                Statement stmt = connection.createStatement();
+                ResultSet result = stmt.executeQuery(sql);
+
+                String selectedUser = "";
+                while (result.next()) {
+                    String name = result.getString("user");
+                    if (name.equals(event.getOption("user").getAsString())) {
+                        selectedUser = name;
+                        break;
+                    }
+                }
+                if (selectedUser.equals("")) {
+                    event.reply("Invalid name, user is not in our database!").setEphemeral(true).queue();
+                } else {
+                    PreparedStatement preparedStatement = connection.prepareStatement("SELECT guilds FROM users WHERE user = ?");
+                    preparedStatement.setString(1, selectedUser);
+                    ResultSet resultSet = preparedStatement.executeQuery();
+
+                    String guilds = "";
+                    while (resultSet.next()) {
+                        guilds = resultSet.getString("guilds");
+                        if (guilds.contains(event.getGuild().getId().toString())) {
+                            guilds = guilds.replace(event.getGuild().getId().toString() + ",", "");
+                        }
+                    }
+
+                    PreparedStatement preparedStatement1 = connection.prepareStatement("UPDATE users SET guilds = ? WHERE user = ?");
+                    preparedStatement1.setString(1, guilds);
+                    preparedStatement1.setString(2, selectedUser);
+                    preparedStatement1.executeUpdate();
+
+                    if (guilds.equals("")) {
+                        PreparedStatement preparedStatement2 = connection.prepareStatement("DELETE FROM users WHERE user = ?");
+                        preparedStatement2.setString(1, selectedUser);
+                        preparedStatement2.executeUpdate();
+                    }
+                    event.reply("User deleted from our database!").setEphemeral(true).queue();
+                }
+            } catch (SQLException e) {
+                System.out.println("Error connecting to SQLite database");
+                e.printStackTrace();
             }
         }
     }
@@ -124,52 +227,81 @@ public class MyListeners extends ListenerAdapter {
                 for (Anime anime : search) {
                     if (event.getValues().get(0).equals(anime.getTitle())) {
                         selectedShow = anime;
-                        break;
                     }
                 }
-                createEmbed(selectedShow);
+                String guild = event.getGuild().getId().toString();
+                executeEmbedSelect(createEmbed(selectedShow, guild), event);
             }
         }
 
         // extracts show out of url
     @Override
     public void onMessageReceived(MessageReceivedEvent event) {
+        String guild = event.getGuild().getId().toString();
         if (event.getMessage().getContentRaw().contains("https://myanimelist.net/anime/")) {
             String url = event.getMessage().getContentRaw();
             event.getMessage().delete().queue();
+
             int startIndex = "https://myanimelist.net/anime/".length();
             int endIndex = url.indexOf("/", startIndex);
             String numberString = url.substring(startIndex, endIndex);
             int number = Integer.parseInt(numberString);
-            System.out.println(number);
             mal = MyAnimeList.withClientID("ed63f8418f1cdf0c626aae8618705f15");
             Anime selectedShow = mal.getAnime(number);
-            executeEmbedMessage(createEmbed(selectedShow), event);
+
+            executeEmbedMessage(createEmbed(selectedShow, guild), event);
         }
     }
 
     //creates an embeded message with the given show
-        public EmbedBuilder createEmbed(Anime selectedShow) {
+        public EmbedBuilder createEmbed(Anime selectedShow, String guild) {
             double scoreTotal = 0.0;
             int totalWatched = 0;
             String hasWatched = "";
             String completed = "";
+            List<String> showList = new ArrayList<>();
+            List<String> scoreList = new ArrayList<>();
+            try {
+                Connection connection = DriverManager
+                        .getConnection("jdbc:mysql://us-cdbr-east-06.cleardb.net:3306/heroku_1e6b905fd709b70",
+                                "b376f2add348e8", "6f63cbc1");
+                String sql = "SELECT * FROM users";
+                Statement stmt = connection.createStatement();
+                ResultSet result = stmt.executeQuery(sql);
 
-            for (List<AnimeListStatus> user : animeListStatus) {
-                for (AnimeListStatus anime : user) {
-                    if (anime.getAnime().getID().equals(selectedShow.getID())) {
-                        completed = "\n\n" + "__Completed__" + "\n";
-                        if (anime.getScore().intValue() == 0) {
-                            hasWatched += currentUser.get(animeListStatus.indexOf(user)) + "\n";
-                        } else {
-                            hasWatched += currentUser.get(animeListStatus.indexOf(user)) + ": " +
-                                    anime.getScore().toString() + "\n";
-                            scoreTotal += anime.getScore().intValue();
-                            totalWatched++;
+                while (result.next()) {
+                    String guilds = result.getString("guilds");
+                    if (guilds.contains(guild)){
+                        String name = result.getString("user");
+                        String anime = result.getString("anime");
+                        String score = result.getString("score");
+                        showList = Arrays.asList(anime.split(","));
+                        scoreList = Arrays.asList(score.split(","));
+
+                        for (String show : showList) {
+                            if (show.equals(selectedShow.getID().toString())) {
+                                completed = "\n\n" + "__Completed__" + "\n";
+                                if (scoreList.get(showList.indexOf(show)).equals("0")) {
+                                    hasWatched += name + "\n";
+                                } else {
+                                    hasWatched += name + ": " +
+                                            scoreList.get(showList.indexOf(show)) + "\n";
+                                    scoreTotal += Integer.parseInt(scoreList.get(showList.indexOf(show)));
+                                    totalWatched++;
+                                }
+                                break;
+                            }
                         }
                     }
+
+
                 }
+            } catch (SQLException e) {
+                System.out.println("Error connecting to SQLite database");
+                e.printStackTrace();
             }
+
+
 
             String serverScore = "\n" + "Average Server Score: " +
                     Math.round(100.0 * scoreTotal / totalWatched) / 100.0 + "";
