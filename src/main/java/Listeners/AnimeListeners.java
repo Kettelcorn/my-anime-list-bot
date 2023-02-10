@@ -65,7 +65,7 @@ public class AnimeListeners extends ListenerAdapter {
 
             // execute mal query for show
             event.deferReply().setEphemeral(true).queue();
-            mal = MyAnimeList.withClientID("ed63f8418f1cdf0c626aae8618705f15");
+            mal = MyAnimeList.withClientID(System.getenv("MAL_KEY"));
             String show = event.getOption("anime").getAsString();
             search = mal.getAnime().withQuery(show).search();
 
@@ -81,7 +81,7 @@ public class AnimeListeners extends ListenerAdapter {
         if (event.getName().equals("anime-update")) {
 
             // get users anime listing
-            MyAnimeList mal = MyAnimeList.withClientID("ed63f8418f1cdf0c626aae8618705f15");
+            MyAnimeList mal = MyAnimeList.withClientID(System.getenv("MAL_KEY"));
             String user = event.getOption("user").getAsString();
             event.deferReply().addContent("Updating " + user + "'s info, this may take a while")
                     .setEphemeral(true).queue();
@@ -91,7 +91,7 @@ public class AnimeListeners extends ListenerAdapter {
             try{
                 Connection connection = DriverManager
                         .getConnection("jdbc:mysql://us-cdbr-east-06.cleardb.net:3306/heroku_1e6b905fd709b70",
-                        "b376f2add348e8", "6f63cbc1");
+                        "b376f2add348e8", System.getenv("DB_PASSWORD"));
 
                 String sql = "SELECT * FROM users";
                 Statement stmt = connection.createStatement();
@@ -165,7 +165,7 @@ public class AnimeListeners extends ListenerAdapter {
             try {
                 Connection connection = DriverManager
                         .getConnection("jdbc:mysql://us-cdbr-east-06.cleardb.net:3306/heroku_1e6b905fd709b70",
-                                "b376f2add348e8", "6f63cbc1");
+                                "b376f2add348e8", System.getenv("DB_PASSWORD"));
 
                 String sql = "SELECT * FROM users";
                 Statement stmt = connection.createStatement();
@@ -239,7 +239,7 @@ public class AnimeListeners extends ListenerAdapter {
             String numberString = url.substring(startIndex, endIndex);
             int number = Integer.parseInt(numberString);
 
-            mal = MyAnimeList.withClientID("ed63f8418f1cdf0c626aae8618705f15");
+            mal = MyAnimeList.withClientID(System.getenv("MAL_KEY"));
             Anime selectedShow = mal.getAnime(number);
             executeEmbedMessage(createEmbed(selectedShow), event);
         }
@@ -261,7 +261,7 @@ public class AnimeListeners extends ListenerAdapter {
         try {
             Connection connection = DriverManager
                     .getConnection("jdbc:mysql://us-cdbr-east-06.cleardb.net:3306/heroku_1e6b905fd709b70",
-                            "b376f2add348e8", "6f63cbc1");
+                            "b376f2add348e8", System.getenv("DB_PASSWORD"));
             PreparedStatement preparedStatement = connection.prepareStatement("SELECT * FROM showinfo WHERE showID = ?");
             preparedStatement.setInt(1, selectedShow.getID().intValue());
             ResultSet result = preparedStatement.executeQuery();

@@ -13,17 +13,15 @@ public class Main {
 
     // create mal bot using token
     public static void main(String[] args) throws LoginException {
-        String token = "MTA3MDkyNjI0MDU2OTA5ODMzMA.Griorb.1czQ4_1eygWo3CCo0LNRFF2khu-oNn36geuJxY";
-        JDA jda = JDABuilder.createDefault(token).enableIntents(GatewayIntent.MESSAGE_CONTENT).build();
+        JDA jda = JDABuilder.createDefault(System.getenv("ANIME_DISCORD")).enableIntents(GatewayIntent.MESSAGE_CONTENT).build();
         jda.addEventListener(new AnimeListeners());
         runCustomBuilder();
     }
 
     // create custom team builder bot using token and set up slash command
     public static void runCustomBuilder() {
-        String token = "MTA2NjUxNTM4NTI2MTc3MjgwMA.GkJ7WE.4R0FKyqw6lFSZT7wQxOHPGMnaTbQyypkZzGNJk";
         JDA jda = JDABuilder
-                .createDefault(token).enableIntents(GatewayIntent.MESSAGE_CONTENT).build();
+                .createDefault(System.getenv("CUSTOM_DISCORD")).enableIntents(GatewayIntent.MESSAGE_CONTENT).build();
         jda.addEventListener(new CustomsListeners());
 
         // slash command for bot
