@@ -172,7 +172,7 @@ public class AnimeListeners extends ListenerAdapter {
                 ResultSet result = stmt.executeQuery(sql);
                 String selectedUser = "";
                 while (result.next()) {
-                    String name = result.getString("user");
+                    String name = result.getString("username");
                     if (name.equals(event.getOption("user").getAsString())) {
                         selectedUser = name;
                         break;
@@ -182,22 +182,22 @@ public class AnimeListeners extends ListenerAdapter {
                 if (selectedUser.equals("")) {
                     event.reply("Invalid name, user is not in our database!").setEphemeral(true).queue();
                 } else {
-                    ResultSet resultSet = selectOption(connection, "guilds", "users", selectedUser);
+                    ResultSet resultSet = selectOption(connection, "guild", "users", selectedUser);
                     String guilds = "";
                     while (resultSet.next()) {
-                        guilds = resultSet.getString("guilds");
+                        guilds = resultSet.getString("guild");
                         if (guilds.contains(event.getGuild().getId())) {
                             guilds = guilds.replace(event.getGuild().getId() + ",", "");
                         }
                     }
 
-                    PreparedStatement preparedStatement1 = connection.prepareStatement("UPDATE users SET guilds = ? WHERE user = ?");
+                    PreparedStatement preparedStatement1 = connection.prepareStatement("UPDATE users SET guild = ? WHERE username = ?");
                     preparedStatement1.setString(1, guilds);
                     preparedStatement1.setString(2, selectedUser);
                     preparedStatement1.executeUpdate();
 
                     if (guilds.equals("")) {
-                        PreparedStatement preparedStatement2 = connection.prepareStatement("DELETE FROM users WHERE user = ?");
+                        PreparedStatement preparedStatement2 = connection.prepareStatement("DELETE FROM users WHERE username = ?");
                         preparedStatement2.setString(1, selectedUser);
                         preparedStatement2.executeUpdate();
                     }
@@ -276,7 +276,7 @@ public class AnimeListeners extends ListenerAdapter {
                         String guilds = resultSet.getString("guild");
                         String user = resultSet.getString("username");
                         System.out.println("outside if");
-                        if (guilds.contains(event.getGuild().getId())) {
+                        if (guilds.contains(event.getGuild().getId().toString())) {
                             int score = result.getInt("showScore");
 
                             // creates string to present users who have watched show
