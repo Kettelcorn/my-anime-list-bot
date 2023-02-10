@@ -93,7 +93,7 @@ public class MyListeners extends ListenerAdapter {
             String user = event.getOption("user").getAsString();
             event.deferReply().addContent("Updating " + user + "'s info, this may take a while")
                     .setEphemeral(true).queue();
-
+            List<AnimeListStatus> animes = mal.getUserAnimeListing(user).withStatus("completed").withLimit(500).search();
             try{
                 Connection connection = DriverManager
                         .getConnection("jdbc:mysql://us-cdbr-east-06.cleardb.net:3306/heroku_1e6b905fd709b70",
@@ -104,47 +104,54 @@ public class MyListeners extends ListenerAdapter {
 
                 String selectedUser = "";
                 while (result.next()) {
-                    String name = result.getString("user");
+                    String name = result.getString("username");
                     if (name.equals(user)) {
                         selectedUser = name;
                     }
                 }
-                if (selectedUser == "") {
+                if (selectedUser.equals("")) {
                     selectedUser = user;
-                    PreparedStatement preparedStatement = connection.prepareStatement("INSERT INTO users (user) VALUES (?)");
+                    PreparedStatement preparedStatement = connection.prepareStatement("INSERT INTO users (username) VALUES (?)");
                     preparedStatement.setString(1, selectedUser);
                     preparedStatement.executeUpdate();
                 }
 
-                animeListStatus.add(mal.getUserAnimeListing(user)
-                        .withStatus("completed").withLimit(500).search());
-                List<String> animeID = new ArrayList<>();
-                List<String> animeScore = new ArrayList<>();
+                PreparedStatement ps = connection.prepareStatement("SELECT userID FROM users WHERE username = ?");
+                ps.setString(1, selectedUser);
+                ResultSet rs = ps.executeQuery();
+
+                int userID = -1;
+                while (rs.next()) {
+                    userID = rs.getInt("userID");
+                }
+
+                PreparedStatement ps2 = connection.prepareStatement("DELETE FROM showinfo WHERE userID = ?");
+                ps2.setInt(1, userID);
+                ps2.executeUpdate();
+
+                animeListStatus.add(animes);
                 for (List<AnimeListStatus> animeList : animeListStatus) {
                     for (AnimeListStatus anime : animeList) {
-                        animeID.add(anime.getAnime().getID().toString());
-                        animeScore.add(anime.getScore().toString());
+                        PreparedStatement preparedStatement2 = connection
+                                .prepareStatement("INSERT INTO showinfo (userID, showID, showScore, showStatus) " +
+                                        "VALUES (?, ?, ?, ?)");
+                        preparedStatement2.setInt(1, userID);
+                        preparedStatement2.setInt(2, anime.getAnime().getID().intValue());
+                        preparedStatement2.setInt(3, anime.getScore().intValue());
+                        preparedStatement2.setString(4,anime.getStatus().toString());
+                        preparedStatement2.executeUpdate();
                     }
                 }
-                String listStr = String.join(",", animeID);
-                String scoreStr = String.join(",", animeScore);
 
-                PreparedStatement preparedStatement2 = connection.prepareStatement("UPDATE users SET anime = ? WHERE user = ?");
-                preparedStatement2.setString(1, listStr);
-                preparedStatement2.setString(2, selectedUser);
-                preparedStatement2.executeUpdate();
-
-                PreparedStatement preparedStatement3 = connection.prepareStatement("UPDATE users SET score = ? WHERE user = ?");
-                preparedStatement3.setString(1, scoreStr);
-                preparedStatement3.setString(2, selectedUser);
-                preparedStatement3.executeUpdate();
+                animeListStatus.clear();
 
                 String guilds = "";
-                PreparedStatement preparedStatement4 = connection.prepareStatement("SELECT guilds FROM users WHERE user = ?");
+                PreparedStatement preparedStatement4 = connection.prepareStatement("SELECT guild FROM users WHERE username = ?");
                 preparedStatement4.setString(1, selectedUser);
                 ResultSet resultSet = preparedStatement4.executeQuery();
+
                 while (resultSet.next()) {
-                    guilds = resultSet.getString("guilds");
+                    guilds = resultSet.getString("guild");
                     if (guilds == null) {
                         guilds = "";
                     }
@@ -153,9 +160,9 @@ public class MyListeners extends ListenerAdapter {
                     }
                 }
 
-                PreparedStatement preparedStatement5 = connection.prepareStatement("UPDATE users SET guilds = ? WHERE user = ?");
+                PreparedStatement preparedStatement5 = connection.prepareStatement("UPDATE users SET guild = ? WHERE userID = ?");
                 preparedStatement5.setString(1, guilds);
-                preparedStatement5.setString(2, selectedUser);
+                preparedStatement5.setInt(2, userID);
                 preparedStatement5.executeUpdate();
 
             } catch (SQLException e) {
@@ -265,43 +272,42 @@ public class MyListeners extends ListenerAdapter {
                 Connection connection = DriverManager
                         .getConnection("jdbc:mysql://us-cdbr-east-06.cleardb.net:3306/heroku_1e6b905fd709b70",
                                 "b376f2add348e8", "6f63cbc1");
-                String sql = "SELECT * FROM users";
-                Statement stmt = connection.createStatement();
-                ResultSet result = stmt.executeQuery(sql);
+                PreparedStatement preparedStatement = connection.prepareStatement("SELECT * FROM showinfo WHERE showID = ?");
+                preparedStatement.setInt(1, selectedShow.getID().intValue());
+                ResultSet result = preparedStatement.executeQuery();
 
                 while (result.next()) {
-                    String guilds = result.getString("guilds");
-                    if (guilds.contains(guild)){
-                        String name = result.getString("user");
-                        String anime = result.getString("anime");
-                        String score = result.getString("score");
-                        showList = Arrays.asList(anime.split(","));
-                        scoreList = Arrays.asList(score.split(","));
+                        int userID = result.getInt("userID");
+                        PreparedStatement preparedStatement2 = connection.prepareStatement("SELECT * FROM users WHERE userID = ?");
+                        preparedStatement2.setInt(1, userID);
+                        ResultSet resultSet = preparedStatement2.executeQuery();
 
-                        for (String show : showList) {
-                            if (show.equals(selectedShow.getID().toString())) {
+                        while (resultSet.next()) {
+                            String guilds = resultSet.getString("guild");
+                            String user = resultSet.getString("username");
+                            System.out.println("outside if");
+                            if (guilds.contains(event.getGuild().getId().toString())) {
+                                String status = result.getString("showStatus");
+                                int score = result.getInt("showScore");
+
                                 completed = "\n\n" + "__Completed__" + "\n";
-                                if (scoreList.get(showList.indexOf(show)).equals("0")) {
-                                    hasWatched += name + "\n";
+                                if (score == 0) {
+                                    hasWatched += user + "\n";
                                 } else {
-                                    hasWatched += name + ": " +
-                                            scoreList.get(showList.indexOf(show)) + "\n";
-                                    scoreTotal += Integer.parseInt(scoreList.get(showList.indexOf(show)));
+                                    hasWatched += user + ": " +
+                                                score + "\n";
+                                    scoreTotal += score;
                                     totalWatched++;
                                 }
-                                break;
+                                System.out.println("Added " + user);
                             }
+
                         }
-                    }
-
-
                 }
             } catch (SQLException e) {
                 System.out.println("Error connecting to SQLite database");
                 e.printStackTrace();
             }
-
-
 
             String serverScore = "\n" + "Average Server Score: " +
                     Math.round(100.0 * scoreTotal / totalWatched) / 100.0 + "";
