@@ -17,14 +17,14 @@ import java.util.*;
 import java.util.List;
 
 
-public class MyListener extends ListenerAdapter {
+public class CustomsListeners extends ListenerAdapter {
     private List<String> members;
     private List<Member> channelPeople;
     private SlashCommandInteractionEvent events;
     private int players;
 
     private StringSelectInteractionEvent event;
-    public MyListener() {
+    public CustomsListeners() {
         members = new ArrayList<>();
         players = 0;
         channelPeople = new ArrayList<>();

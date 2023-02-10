@@ -1,43 +1,30 @@
 package org.example;
 
 import javax.security.auth.login.LoginException;
-import java.net.URL;
-import java.sql.*;
-import java.time.Duration;
-import java.util.*;
 
-import Listeners.MyListener;
-import Listeners.MyListeners;
-import dev.katsute.mal4j.MyAnimeList;
-import dev.katsute.mal4j.anime.AnimeListStatus;
+
+import Listeners.AnimeListeners;
+import Listeners.CustomsListeners;
 import net.dv8tion.jda.api.JDA;
 import net.dv8tion.jda.api.JDABuilder;
-import net.dv8tion.jda.api.entities.Guild;
-import net.dv8tion.jda.api.entities.Message;
-import net.dv8tion.jda.api.entities.channel.middleman.MessageChannel;
-import net.dv8tion.jda.api.events.interaction.command.SlashCommandInteractionEvent;
-import net.dv8tion.jda.api.interactions.commands.OptionType;
-import net.dv8tion.jda.api.interactions.commands.build.CommandData;
-import net.dv8tion.jda.api.interactions.commands.build.Commands;
-import net.dv8tion.jda.api.interactions.commands.build.OptionData;
 import net.dv8tion.jda.api.requests.GatewayIntent;
 
 public class Main {
 
-    // create bot using token and sets slash commands
+    // create mal bot using token
     public static void main(String[] args) throws LoginException {
         String token = "MTA3MDkyNjI0MDU2OTA5ODMzMA.Griorb.1czQ4_1eygWo3CCo0LNRFF2khu-oNn36geuJxY";
         JDA jda = JDABuilder.createDefault(token).enableIntents(GatewayIntent.MESSAGE_CONTENT).build();
-        jda.addEventListener(new MyListeners());
+        jda.addEventListener(new AnimeListeners());
         runCustomBuilder();
     }
 
+    // create custom team builder bot using token and set up slash command
     public static void runCustomBuilder() {
         String token = "MTA2NjUxNTM4NTI2MTc3MjgwMA.GkJ7WE.4R0FKyqw6lFSZT7wQxOHPGMnaTbQyypkZzGNJk";
         JDA jda = JDABuilder
-                .createDefault("MTA2NjUxNTM4NTI2MTc3MjgwMA.GkJ7WE.4R0FKyqw6lFSZT7wQxOHPGMnaTbQyypkZzGNJk").enableIntents(GatewayIntent.MESSAGE_CONTENT)
-                .build();
-        jda.addEventListener(new MyListener());
+                .createDefault(token).enableIntents(GatewayIntent.MESSAGE_CONTENT).build();
+        jda.addEventListener(new CustomsListeners());
 
         // slash command for bot
         jda.upsertCommand("custom-builder", "creates ARAM team").setGuildOnly(true).queue();
