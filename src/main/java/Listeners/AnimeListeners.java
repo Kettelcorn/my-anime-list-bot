@@ -10,6 +10,7 @@ import dev.katsute.mal4j.anime.Anime;
 import dev.katsute.mal4j.anime.AnimeListStatus;
 
 import net.dv8tion.jda.api.EmbedBuilder;
+import net.dv8tion.jda.api.entities.Guild;
 import net.dv8tion.jda.api.events.guild.GuildReadyEvent;
 import net.dv8tion.jda.api.events.interaction.command.SlashCommandInteractionEvent;
 import net.dv8tion.jda.api.events.interaction.component.StringSelectInteractionEvent;
@@ -28,7 +29,7 @@ public class AnimeListeners extends ListenerAdapter {
     private List<Anime> search;
     private MyAnimeList mal;
     private List<List<AnimeListStatus>> animeListStatus;
-    private GuildReadyEvent event;
+    private Guild guild;
 
 
     public AnimeListeners(){
@@ -40,7 +41,6 @@ public class AnimeListeners extends ListenerAdapter {
     // sets up slash commands
     @Override
     public void onGuildReady(GuildReadyEvent event) {
-        this.event = event;
         List<CommandData> commandData = new ArrayList<>();
         OptionData option1 = new OptionData(OptionType.STRING, "user", "enter username");
         OptionData option2 = new OptionData(OptionType.STRING, "anime", "enter anime");
@@ -59,10 +59,9 @@ public class AnimeListeners extends ListenerAdapter {
     // chooses between mal-search and mal update slash commands
     @Override
     public void onSlashCommandInteraction(@NotNull SlashCommandInteractionEvent event) {
-
         // search for an anime
         if (event.getName().equals("anime-search")) {
-
+            guild = event.getGuild();
             // execute mal query for show
             event.deferReply().setEphemeral(true).queue();
             mal = MyAnimeList.withClientID(System.getenv("MAL_KEY"));
@@ -79,7 +78,7 @@ public class AnimeListeners extends ListenerAdapter {
 
         // update user info in database
         if (event.getName().equals("anime-update")) {
-
+            guild = event.getGuild();
             // get users anime listing
             MyAnimeList mal = MyAnimeList.withClientID(System.getenv("MAL_KEY"));
             String user = event.getOption("user").getAsString();
@@ -162,6 +161,7 @@ public class AnimeListeners extends ListenerAdapter {
 
         // remove user from database in specific guild
         if (event.getName().equals("anime-remove")) {
+            guild = event.getGuild();
             try {
                 Connection connection = DriverManager
                         .getConnection("jdbc:mysql://us-cdbr-east-06.cleardb.net:3306/heroku_1e6b905fd709b70",
@@ -186,7 +186,7 @@ public class AnimeListeners extends ListenerAdapter {
                     String guilds = "";
                     while (resultSet.next()) {
                         guilds = resultSet.getString("guild");
-                        if (guilds.contains(event.getGuild().getId())) {
+                        if (guilds.contains(event.getGuild().getId().toString())) {
                             guilds = guilds.replace(event.getGuild().getId() + ",", "");
                         }
                     }
@@ -274,22 +274,26 @@ public class AnimeListeners extends ListenerAdapter {
 
                     while (resultSet.next()) {
                         String guilds = resultSet.getString("guild");
+                        List<String> guildList = Arrays.asList(guilds.split(","));
                         String user = resultSet.getString("username");
+                        String guildID = guild.getId();
                         System.out.println("outside if");
-                        if (guilds.contains(event.getGuild().getId().toString())) {
-                            int score = result.getInt("showScore");
+                        for (String id : guildList) {
+                            if (id.equals(guild.getId())) {
+                                int score = result.getInt("showScore");
 
-                            // creates string to present users who have watched show
-                            completed = "\n\n" + "__Completed__" + "\n";
-                            if (score == 0) {
-                                hasWatched += user + "\n";
-                            } else {
-                                hasWatched += user + ": " +
+                                // creates string to present users who have watched show
+                                completed = "\n\n" + "__Completed__" + "\n";
+                                if (score == 0) {
+                                    hasWatched += user + "\n";
+                                } else {
+                                    hasWatched += user + ": " +
                                             score + "\n";
-                                scoreTotal += score;
-                                totalWatched++;
+                                    scoreTotal += score;
+                                    totalWatched++;
+                                }
+                                System.out.println("Added " + user);
                             }
-                            System.out.println("Added " + user);
                         }
                     }
             }
