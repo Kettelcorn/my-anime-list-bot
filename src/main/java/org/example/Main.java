@@ -3,7 +3,7 @@ package org.example;
 import javax.security.auth.login.LoginException;
 
 
-import Listeners.AnimeListeners;
+import Listeners.ShowListener;
 import Listeners.CustomsListeners;
 import net.dv8tion.jda.api.JDA;
 import net.dv8tion.jda.api.JDABuilder;
@@ -14,7 +14,7 @@ public class Main {
     // create mal bot using token
     public static void main(String[] args) throws LoginException {
         JDA jda = JDABuilder.createDefault(System.getenv("ANIME_DISCORD")).enableIntents(GatewayIntent.MESSAGE_CONTENT).build();
-        jda.addEventListener(new AnimeListeners());
+        jda.addEventListener(new ShowListener());
         runCustomBuilder();
     }
 

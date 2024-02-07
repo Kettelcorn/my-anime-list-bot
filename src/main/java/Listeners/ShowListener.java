@@ -24,15 +24,15 @@ import net.dv8tion.jda.api.interactions.components.selections.StringSelectMenu;
 
 import org.jetbrains.annotations.NotNull;
 
-public class AnimeListeners extends ListenerAdapter {
+public class ShowListener extends ListenerAdapter {
 
-    private List<Anime> search;
+    private List<Show> search;
     private MyAnimeList mal;
     private List<List<AnimeListStatus>> animeListStatus;
     private Guild guild;
 
 
-    public AnimeListeners(){
+    public ShowListener(){
         search = new ArrayList<>();
         animeListStatus = new ArrayList<>();
     }
